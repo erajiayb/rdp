@@ -1,0 +1,39 @@
+name: Tailscale Remote Access
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'مدة التشغيل بالدقائق (مثال: 60)'
+        required: true
+        default: '60'
+
+jobs:
+  run-desktop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360 # أقصى مدة مسموحة للـ Job الواحد في غيتهاب هي 6 ساعات
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          args: --ssh --hostname=github-runner
+
+      - name: Install Desktop Environment & VNC/XRDP
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xfce4 xfce4-goodies xrdp
+          sudo systemctl enable xrdp
+          sudo systemctl start xrdp
+          # تعيين كلمة سر للمستخدم الموقت لتسجيل الدخول
+          echo "runner:P@ssw0rd123!" | sudo chpasswd
+          echo "تم تثبيت واجهة XFCE وخدمة XRDP بنجاح!"
+
+      - name: Keep Runner Alive
+        run: |
+          echo "البيئة تعمل الآن عبر Tailscale. يمكنك الاتصال بها."
+          sleep 21600 # يمنع الإغلاق الفوري لمدة تصل إلى 6 ساعات أو حسب رغبتك
